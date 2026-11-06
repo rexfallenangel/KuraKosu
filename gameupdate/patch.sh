@@ -534,6 +534,26 @@ retire_data_wolf() {
     fi
 }
 
+wolf_retire_split_archives() {
+    # Older WOLF builds read Data/<Name>.wolf before a loose Data/<Name>/ folder.
+    # gameupdate/split-archives.txt lists stems whose complete loose folder ships with the patch.
+    local list="$ROOT_DIR/gameupdate/split-archives.txt"
+    [ -f "$list" ] || return 0
+    local stem d archive folder
+    while IFS= read -r stem || [ -n "$stem" ]; do
+        stem="$(echo "$stem" | tr -d '' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
+        case "$stem" in ''|'#'*) continue ;; esac
+        for d in Data data; do
+            archive="$ROOT_DIR/$d/$stem.wolf"
+            folder="$ROOT_DIR/$d/$stem"
+            [ -f "$archive" ] && [ -d "$folder" ] || continue
+            [ -n "$(find "$folder" -type f -print -quit)" ] || continue
+            if [ -e "$archive.bak" ]; then rm -f "$archive"; else mv -f "$archive" "$archive.bak"; fi
+            echo "[Pre-Setup] Retired $stem.wolf so the loose $stem/ folder is used"
+        done
+    done < "$list"
+}
+
 invoke_wolf_pre_setup() {
     local data_wolf=""
     local name
@@ -819,6 +839,7 @@ download_extract() {
 
     # Retire Data.wolf if loose Data/ is ready after the patch copy.
     invoke_wolf_pre_setup
+    wolf_retire_split_archives
 
     echo "Cleaning up..."
     rm -rf "$TMP_EX"

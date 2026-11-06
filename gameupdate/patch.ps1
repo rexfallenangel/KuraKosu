@@ -853,6 +853,33 @@ function Test-WolfGameRoot {
     return $false
 }
 
+function Invoke-WolfRetireSplitArchives {
+    <#
+    Some older WOLF builds read Data\<Name>.wolf before a loose Data\<Name>\ folder.
+    gameupdate\split-archives.txt lists the archive stems whose complete loose folder
+    ships with the patch; once that folder holds its files the archive is retired
+    (renamed to .bak) so the English files are the ones the game reads.
+    #>
+    param([Parameter(Mandatory = $true)][string]$Root)
+    $list = Join-Path $Root 'gameupdate\split-archives.txt'
+    if (-not (Test-Path -LiteralPath $list -PathType Leaf)) { return }
+    foreach ($line in (Get-Content -LiteralPath $list -Encoding UTF8)) {
+        $stem = $line.Trim()
+        if (-not $stem -or $stem.StartsWith('#')) { continue }
+        foreach ($dataName in @('Data', 'data')) {
+            $archive = Join-Path (Join-Path $Root $dataName) ($stem + '.wolf')
+            $folder = Join-Path (Join-Path $Root $dataName) $stem
+            if (-not (Test-Path -LiteralPath $archive -PathType Leaf)) { continue }
+            if (-not (Test-Path -LiteralPath $folder -PathType Container)) { continue }
+            if (@(Get-ChildItem -LiteralPath $folder -File -Recurse -ErrorAction SilentlyContinue).Count -eq 0) { continue }
+            $bak = $archive + '.bak'
+            if (Test-Path -LiteralPath $bak) { Remove-Item -LiteralPath $archive -Force }
+            else { Rename-Item -LiteralPath $archive -NewName ([IO.Path]::GetFileName($bak)) -Force }
+            Write-Host ('[Pre-Setup] Retired {0}.wolf so the loose {0}\ folder is used' -f $stem)
+        }
+    }
+}
+
 function Find-UberWolfCli {
     param([Parameter(Mandatory = $true)][string]$Root)
     $candidates = @(
@@ -1740,6 +1767,7 @@ try {
     # Safety: if Data/ is ready (from unpack or patch files) but Data.wolf
     # remains, retire it so the archive does not override loose English files.
     Invoke-WolfPreSetup -Root $GameRoot
+    Invoke-WolfRetireSplitArchives -Root $GameRoot
 
     Write-Host 'Cleaning up...'
     Remove-PatchTempArtifacts -Root $GameRoot

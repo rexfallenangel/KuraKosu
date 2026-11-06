@@ -1,3 +1,25 @@
+
+
+# BEGIN DazedTL Len project work
+# Len work, guidance, translation stores and QA artifacts stay local.
+# Runtime patch files are selected separately with git-scope.
+/.dazedtl/**
+.env
+.env.*
+.api_key
+api_keys.json
+*_key.txt
+*_keys.txt
+.venv/
+venv/
+__pycache__/
+node_modules/
+saves/
+save/
+logs/
+cache/
+# END DazedTL Len project work
+
 # BEGIN DazedTL Len patch files
 # Only reviewed runtime patch files and repository metadata belong in Git.
 /*

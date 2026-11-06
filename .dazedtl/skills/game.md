@@ -1,0 +1,6 @@
+Theme / setting: Bawdy, lighthearted adult comedy-fantasy RPG (Wolf RPG Editor, 2013). Princess Kuran and her attendant Sherry travel a medieval-fantasy kingdom and a school town, collecting costumes ("cosplay") that boost stats; erotic costume scenes (nude, school swimsuit, maid, bunny girl, etc.) run as scripted text scenes.
+Era / technology level: Medieval fantasy with school, gym, bar and office pastiche.
+Overall English register: Playful, colloquial, adult. Kuran sounds queenly and old-fashioned (the のじゃ speech), Sherry polite, commoners casual. Sexual wording stays as frank as the Japanese.
+Naming policy: Kuran, Sherry, Arc Doyle, Toona; monster and costume names in natural English; UI labels stay short.
+Runtime codes: \cself[N], \cdb[...] and \udb[...] insert runtime database or variable values (names, numbers); \f[N] sets font size; \c[N] colour; \r[kanji,kana] ruby; \E, \s[N], \v[N], \i[N] and \ax[N] are layout, variable and icon codes. Keep every code byte-identical and in order. A leading "@N" line sets the message window style and is handled outside the translation.
+Dialogue format: the first line of a spoken message is the nameplate "Name:" (full-width colon in Japanese); translate the name from the glossary and keep it alone on the first line with an ASCII colon. Scenario text blocks (blank-line separated) use the same format.

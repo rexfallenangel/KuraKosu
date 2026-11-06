@@ -1,4 +1,24 @@
-# Add character glossary entries here
+# Characters
+クラン (Kuran) - Protagonist princess (female; called 姫/姫様). Archaic, haughty-but-kind royal register (のじゃ, お主, 貴様): old-fashioned queenly English ("I shall", "you there", "my dear") with a confident, playful lilt; no thee/thou. In H scenes her speech breaks into stammers and squeals - keep those sounds. Nameplate: Kuran.
+クラン姫 (Princess Kuran) - Title form, as in the game title クラン姫のコスプレRPG (Princess Kuran's Cosplay RPG).
+姫様 (Princess) - Address to Kuran by Sherry and others; "Your Highness" only from soldiers and commoners. Bare 姫 is "Princess".
+シェリー (Sherry) - Kuran's attendant who does the practical work of the journey. Gender is not stated in the source: avoid gendered pronouns for Sherry where English allows. Polite, level-headed, gently scolding register (です/ます); calls Kuran 姫様 (Princess). Nameplate: Sherry.
+アーク・ドイル (Arc Doyle) - King of the nation of Toona and the heroes' target; enemies speak of him with reverence (ドイル様 = "Lord Doyle").
+トオナ (Toona) - Enemy nation ruled by Arc Doyle.
+トオナ城 (Toona Castle) - Castle location.
+ファッキンサイエン (Fuckin' Saien) - Mad-scientist sample-collector enemy; cackles ヒッヒッヒ ("Hehehe").
+許嫁 (Fiance) - Kuran's betrothed in the opening scene; male, gentle, first person 僕. Nameplate: Fiance.
+王 (King) - Male king in the Queen-costume scene; first person 俺. Nameplate: King.
+オヤブンオーク (Boss Orc) - Orc leader.
+オーク (Orc) - Monster.
+スライム (slime) - Monster; lowercase in prose, capitalised only as an enemy or database label.
+リザードマン (Lizardman) - Monster.
+ファングタイガー (Fang Tiger) - Monster.
+クラケンイカ (Kraken Squid) - Monster.
+？？？ (???) - Unidentified speaker nameplate; keep as ???.
+コスプレ (cosplay) - Core theme: costumes (衣装) that change Kuran's stats and skills.
+衣装 (Costume) - Costume menu label.
+型紙 (Pattern) - Costume sewing-pattern item type ("<Costume> Pattern").
 
 # ── Base Glossary (auto-appended from glossary_base.txt — do not edit below) ──
 # Honorifics

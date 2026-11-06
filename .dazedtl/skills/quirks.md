@@ -5,3 +5,4 @@ Render Kuran's のじゃ/お主 speech as consistent old-fashioned royal English
 Keep moans, squeals and stammers recognisable ("Hnn...", "Ah-ah..."); do not sanitize or shorten sexual sounds and wording.
 Avoid commas inside choice texts; a comma would split the menu entry.
 Use Title Case for names of items, skills, costumes and locations, and keep such labels short (they sit in narrow menu columns).
+Keep sentence-ending punctuation of the source (such as ! and ?) where it carries tone.

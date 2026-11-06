@@ -16,6 +16,9 @@
 ファングタイガー (Fang Tiger) - Monster.
 クラケンイカ (Kraken Squid) - Monster.
 ？？？ (???) - Unidentified speaker nameplate; keep as ???.
+立ち絵 (Standing Art) - Character standing-portrait artwork; gallery labels read "Kuran's Standing Art" / "Sherry's Standing Art" (already lettered in the gallery image).
+ドットH劇場 (Dot H Theater) - Gallery of pixel-art H scenes (lettered in the gallery image).
+回想劇場 (Recollection Theater) - The CG/scene recollection gallery (lettered in its backdrop image).
 コスプレ (cosplay) - Core theme: costumes (衣装) that change Kuran's stats and skills.
 衣装 (Costume) - Costume menu label.
 型紙 (Pattern) - Costume sewing-pattern item type ("<Costume> Pattern").

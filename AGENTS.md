@@ -19,3 +19,8 @@ Engine: Wolf RPG Editor (2013), split archives in `Data/*.wolf` (no `Data.wolf`)
 - Names: Kuran, Sherry, Arc Doyle, Toona (see `.dazedtl/glossary.txt`). Sherry's gender is unstated: avoid gendered pronouns.
 - Never translate or rename scenario file names or `/` command lines.
 - Do not edit `.dazedtl/.git` (a stray nested repo made by an early progress report was removed; the game's real history is in the top-level `.git`).
+
+## State notes
+- Ruby `\r[kanji,kana]` is stripped from units at extraction (the translating model kept breaking it); injected text has no ruby.
+- Fit: `wolf relayout en_stage -o relay --width 52 --width-face 52 --max-rows 4 --orig un` then `wrap_scn.py` (wraps scenario lines to 56 chars). Widths are estimates from the JP corpus (58); not checked on screen.
+- Four requests (57 units, e.g. the item-count suffix event, two sample-map lines with ruby, one database row) still failed in the Live runs and remain Japanese until retried or translated by another model.

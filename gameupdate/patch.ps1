@@ -1768,7 +1768,6 @@ try {
     # remains, retire it so the archive does not override loose English files.
     Invoke-WolfPreSetup -Root $GameRoot
     Invoke-WolfRetireSplitArchives -Root $GameRoot
-    & (Join-Path $GameRoot 'gameupdatepply-deltas.ps1') -Root $GameRoot
 
     Write-Host 'Cleaning up...'
     Remove-PatchTempArtifacts -Root $GameRoot

@@ -2,7 +2,7 @@
 1. Click Code
 2. Click Download ZIP
 3. Extract to the game folder and Replace All.
-4. Run **`ApplyPatch.bat`**. It patches `BasicData.wolf`, `MapData.wolf` and `scenario.wolf` from the `.xdelta` files in `gameupdate/deltas` and keeps the originals as `.wolf.bak`. It needs game version 2.01 and changes nothing if the files do not match.
+4. In the game's `Data` folder, rename `BasicData.wolf`, `MapData.wolf` and `scenario.wolf` to end in `.bak`. This game ignores the translated folders while those archives are there. GameUpdate does this for you.
 
 ## Future Patching
 Run **`GameUpdate.bat`** (Windows) or **`GameUpdate_linux.sh`** (Linux) from the game folder to auto patch.

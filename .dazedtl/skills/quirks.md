@@ -4,3 +4,4 @@ Keep source line breaks as line breaks in English, with short lines; never join 
 Render Kuran's のじゃ/お主 speech as consistent old-fashioned royal English across the whole game.
 Keep moans, squeals and stammers recognisable ("Hnn...", "Ah-ah..."); do not sanitize or shorten sexual sounds and wording.
 Avoid commas inside choice texts; a comma would split the menu entry.
+Use Title Case for names of items, skills, costumes and locations, and keep such labels short (they sit in narrow menu columns).

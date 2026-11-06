@@ -350,6 +350,7 @@ cache/
 !/UberWolfCli.exe
 !/gameupdate/TranslationUpdateCheck.js
 !/gameupdate/patch-config.example.txt
+!/gameupdate/patch-config.txt
 !/gameupdate/patch.ps1
 !/gameupdate/patch.sh
 !/gameupdate/split-archives.txt

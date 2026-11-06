@@ -3,5 +3,9 @@
   "languages": {
     "source": "Japanese",
     "target": "English"
+  },
+  "gameUpdate": {
+    "repo": "KuraKosu",
+    "written": "245523a29265a1a3c72a2bf37ea652c3f313b4c53a4479057047d7688fb28c88"
   }
 }

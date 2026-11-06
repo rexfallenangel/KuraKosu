@@ -1,0 +1,7 @@
+# GameUpdate downloads the translation patch from this repository.
+# DazedTL writes this file from Settings > GameUpdate and the game's Project page.
+forge=github
+host=github.com
+username=rexfallenangel
+repo=KuraKosu
+branch=main

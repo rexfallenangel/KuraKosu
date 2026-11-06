@@ -2,6 +2,7 @@
 1. Click Code
 2. Click Download ZIP
 3. Extract to game folder and Replace All.
+4. In the game's `Data` folder, rename `BasicData.wolf`, `MapData.wolf`, `scenario.wolf` and `Picture.wolf` to end in `.bak`. This game ignores the translated folders while those archives exist. GameUpdate does this step for you.
 
 ## Future Patching
 Run **`GameUpdate.bat`** (Windows) or **`GameUpdate_linux.sh`** (Linux) from the game folder to auto patch.

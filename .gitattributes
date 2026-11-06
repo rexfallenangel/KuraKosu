@@ -1,0 +1,6 @@
+# Preserve native game payload bytes across platforms.
+* -text
+# DazedTL's glossary, settings, skills and assistant notes, and VX Ace's ace_json, stay out of players' downloads.
+/.dazedtl export-ignore
+/ace_json export-ignore
+/[aA][gG][eE][nN][tT][sS].[mM][dD] export-ignore

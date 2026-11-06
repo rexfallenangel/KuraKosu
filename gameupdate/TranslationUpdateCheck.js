@@ -1,0 +1,565 @@
+/*:
+ * @target MV MZ
+ * @plugindesc Warns when a newer DazedTL translation patch is available.
+ * @author DazedTranslations
+ *
+ * @help TranslationUpdateCheck.js
+ *
+ * This plugin reads gameupdate/patch-config.txt and
+ * gameupdate/previous_patch_sha.txt, then compares the installed patch with
+ * the configured repository branch. If a newer commit exists, it shows a
+ * warning telling the player to run GameUpdate.
+ *
+ * The check is deliberately fail-open. Missing files, unsupported configs,
+ * network failures, malformed responses, and all other errors are ignored so
+ * they can never prevent the game from starting.
+ *
+ * The parameters hold the text players see, in the translation's language;
+ * an empty one shows its English default.
+ *
+ * It also loads the translator's TL Inspector, js/plugins/TLInspector.js,
+ * when that file is in the game. The Inspector stays on the translator's
+ * computer and out of plugins.js, so players' games never ask for it.
+ *
+ * @param title
+ * @text Title
+ * @default Translation update available
+ *
+ * @param detail
+ * @text Message
+ * @default A newer version of this translation is available. Close the game and run GameUpdate, or patch it manually from the repository:
+ *
+ * @param repositoryLink
+ * @text Repository link
+ * @default Open translation repository (manual patch)
+ *
+ * @param installedButton
+ * @text Installed button
+ * @default I installed this update manually
+ *
+ * @param installedConfirm
+ * @text Installed confirmation
+ * @default Only confirm after closing the game and copying the latest translation files into this game. Mark this update as installed?
+ *
+ * @param saveFailed
+ * @text Save failure
+ * @default The translation version could not be saved. The game can continue, but this warning may appear again.
+ *
+ * @param continueButton
+ * @text Continue button
+ * @default Continue
+ *
+ * @param alertText
+ * @text Plain warning
+ * @desc Shown in a plain alert, followed by Plain warning help and the repository address, where the game has no page to draw on.
+ * @default A newer version of this translation is available.
+ *
+ * @param alertHelp
+ * @text Plain warning help
+ * @default Close the game and run GameUpdate.bat (Windows) or GameUpdate_linux.sh (Linux) from the game folder.
+ */
+
+(function() {
+    "use strict";
+
+    var REQUEST_TIMEOUT_MS = 5000;
+    var MAX_RESPONSE_BYTES = 1024 * 1024;
+    // The translator's TL Inspector, relative to index.html.
+    var INSPECTOR = "js/plugins/TLInspector.js";
+    var ENGLISH = {
+        title: "Translation update available",
+        detail: "A newer version of this translation is available. Close the game and run GameUpdate, or patch it manually from the repository:",
+        repositoryLink: "Open translation repository (manual patch)",
+        installedButton: "I installed this update manually",
+        installedConfirm: "Only confirm after closing the game and copying the latest " +
+            "translation files into this game. Mark this update as installed?",
+        saveFailed: "The translation version could not be saved. The game can " +
+            "continue, but this warning may appear again.",
+        continueButton: "Continue",
+        alertText: "A newer version of this translation is available.",
+        alertHelp: "Close the game and run GameUpdate.bat (Windows) or " +
+            "GameUpdate_linux.sh (Linux) from the game folder."
+    };
+    var parameters = {};
+    try {
+        if (typeof PluginManager !== "undefined" && PluginManager.parameters) {
+            parameters = PluginManager.parameters("TranslationUpdateCheck") || {};
+        }
+    } catch (_parametersError) {
+        // English text is shown without the game's own.
+    }
+
+    // The text players see for *key*: the game's own, or English.
+    function text(key) {
+        var value = parameters[key];
+        return typeof value === "string" && value.trim() ? value : ENGLISH[key];
+    }
+
+    function nodeRequire(name) {
+        if (typeof require === "function") {
+            return require(name);
+        }
+        if (typeof window !== "undefined" && typeof window.require === "function") {
+            return window.require(name);
+        }
+        return null;
+    }
+
+    function uniquePush(items, value, path) {
+        if (!value) return;
+        var normalized;
+        try {
+            normalized = path.resolve(value);
+        } catch (_error) {
+            return;
+        }
+        if (items.indexOf(normalized) < 0) items.push(normalized);
+        if (path.basename(normalized).toLowerCase() === "www") {
+            var parent = path.dirname(normalized);
+            if (items.indexOf(parent) < 0) items.push(parent);
+        }
+    }
+
+    function findGameRoot(fs, path) {
+        var candidates = [];
+        try {
+            if (typeof process !== "undefined" && process.cwd) {
+                uniquePush(candidates, process.cwd(), path);
+            }
+        } catch (_cwdError) {
+            // A failed root candidate is not a startup failure.
+        }
+        try {
+            if (typeof location !== "undefined" && location.pathname) {
+                var locationPath = decodeURIComponent(location.pathname);
+                if (/^\/[A-Za-z]:\//.test(locationPath)) locationPath = locationPath.slice(1);
+                uniquePush(candidates, path.dirname(locationPath), path);
+            }
+        } catch (_locationError) {
+            // Continue with the other candidates.
+        }
+        try {
+            if (typeof process !== "undefined" && process.execPath) {
+                uniquePush(candidates, path.dirname(process.execPath), path);
+            }
+        } catch (_execError) {
+            // Continue with the other candidates.
+        }
+
+        for (var i = 0; i < candidates.length; i++) {
+            var configPath = path.join(candidates[i], "gameupdate", "patch-config.txt");
+            try {
+                if (fs.statSync(configPath).isFile()) return candidates[i];
+            } catch (_statError) {
+                // Try the next possible game root.
+            }
+        }
+        return null;
+    }
+
+    function parseConfig(text) {
+        var config = {
+            forge: "gitlab",
+            host: "",
+            username: "",
+            repo: "",
+            branch: ""
+        };
+        String(text || "").split(/\r?\n/).forEach(function(rawLine) {
+            var line = rawLine.trim();
+            if (!line || line.charAt(0) === "#") return;
+            var equals = line.indexOf("=");
+            if (equals < 1) return;
+            var key = line.slice(0, equals).trim().toLowerCase();
+            var value = line.slice(equals + 1).trim();
+            if (key === "provider") key = "forge";
+            if (key === "owner" || key === "org") key = "username";
+            if (Object.prototype.hasOwnProperty.call(config, key)) config[key] = value;
+        });
+        return config;
+    }
+
+    function resolveRemote(config) {
+        var rawForge = String(config.forge || "gitlab").toLowerCase().replace(/\s/g, "");
+        var forge;
+        if (/^(gitlab|gl|gitgud)$/.test(rawForge)) forge = "gitlab";
+        else if (/^(github|gh)$/.test(rawForge)) forge = "github";
+        else if (/^(forgejo|gitea|fj|codeberg)$/.test(rawForge)) forge = "forgejo";
+        else return null;
+
+        if (!config.username || !config.repo || !config.branch) return null;
+        if (/^YOUR_/i.test(config.username) || /^YOUR_/i.test(config.repo)) return null;
+
+        var host = String(config.host || "").trim()
+            .replace(/^https?:\/\//i, "").replace(/\/.*$/, "").replace(/\s/g, "");
+        if (!host) {
+            host = forge === "github" ? "github.com" :
+                forge === "forgejo" ? "codeberg.org" : "gitgud.io";
+        }
+        if (!/^[A-Za-z0-9.-]+(?::[0-9]+)?$/.test(host)) return null;
+
+        var webHost = host;
+        var webOwner = String(config.username).split("/").map(encodeURIComponent).join("/");
+        var repoUrl = "https://" + webHost + "/" + webOwner + "/" + encodeURIComponent(config.repo);
+        var hostParts = host.split(":");
+        var hostname = hostParts[0];
+        var port = hostParts.length === 2 ? Number(hostParts[1]) : 443;
+        var owner = encodeURIComponent(config.username);
+        var repo = encodeURIComponent(config.repo);
+        var branch = encodeURIComponent(config.branch);
+        var apiPath;
+        if (forge === "gitlab") {
+            var project = encodeURIComponent(config.username + "/" + config.repo);
+            apiPath = "/api/v4/projects/" + project + "/repository/branches/" + branch;
+        } else if (forge === "github") {
+            hostname = hostname === "github.com" ? "api.github.com" : hostname;
+            apiPath = (hostname === "api.github.com" ? "" : "/api/v3") +
+                "/repos/" + owner + "/" + repo + "/commits/" + branch;
+        } else {
+            apiPath = "/api/v1/repos/" + owner + "/" + repo + "/branches/" + branch;
+        }
+        return {
+            forge: forge,
+            hostname: hostname,
+            port: port,
+            path: apiPath,
+            // Git's smart HTTP, on the web host, answers when the API does not.
+            gitHostname: hostParts[0],
+            gitPath: "/" + webOwner + "/" + encodeURIComponent(config.repo) +
+                ".git/info/refs?service=git-upload-pack",
+            // pkt-line lengths count bytes, so the advertisement is read as
+            // latin1 and the branch's name as its UTF-8 bytes.
+            branchRef: unescape(encodeURIComponent("refs/heads/" + config.branch)),
+            repoUrl: repoUrl
+        };
+    }
+
+    function requestHeaders(forge) {
+        var headers = {
+            "User-Agent": "DazedTL-TranslationUpdateCheck/1.0",
+            "Accept": "application/json"
+        };
+        // GitGud lets an app's request past its Cloudflare challenge when it
+        // carries this header, whatever its value; GitLab itself ignores it.
+        if (forge === "gitlab") headers["X-Gitlab-Token"] = "dazedtl-gameupdate";
+        return headers;
+    }
+
+    function latestShaFromResponse(forge, payload) {
+        if (!payload || typeof payload !== "object") return "";
+        if (forge === "github") return String(payload.sha || "").trim();
+        return String(payload.commit && payload.commit.id || "").trim();
+    }
+
+    // The commit *ref* points at in a Git smart HTTP ref advertisement, a
+    // series of pkt-lines: four hex digits of length, then "<sha> <ref>".
+    function shaFromAdvertisement(body, ref) {
+        var offset = 0;
+        while (offset + 4 <= body.length) {
+            var size = parseInt(body.slice(offset, offset + 4), 16);
+            if (!(size >= 0) || (size > 0 && size < 4)) return "";
+            if (size === 0) {
+                offset += 4;
+                continue;
+            }
+            var line = body.slice(offset + 4, offset + size).split("\0")[0].trim();
+            offset += size;
+            var match = /^([0-9a-f]{40,64}) (\S+)$/.exec(line);
+            if (match && match[2] === ref) return match[1];
+        }
+        return "";
+    }
+
+    // GETs *path* and passes *parse* the body, or "" on any failure.
+    function requestText(https, hostname, port, path, headers, encoding, parse, callback) {
+        var finished = false;
+        function finish(value) {
+            if (finished) return;
+            finished = true;
+            callback(value || "");
+        }
+        var request;
+        try {
+            request = https.get({
+                protocol: "https:",
+                hostname: hostname,
+                port: port,
+                path: path,
+                headers: headers
+            }, function(response) {
+                try {
+                    if (response.statusCode !== 200) {
+                        if (response.resume) response.resume();
+                        finish("");
+                        return;
+                    }
+                    var body = "";
+                    response.setEncoding(encoding);
+                    response.on("data", function(chunk) {
+                        body += chunk;
+                        if (body.length > MAX_RESPONSE_BYTES) {
+                            if (request && request.destroy) request.destroy();
+                            finish("");
+                        }
+                    });
+                    response.on("end", function() {
+                        try {
+                            finish(parse(body));
+                        } catch (_parseError) {
+                            finish("");
+                        }
+                    });
+                    response.on("error", function() { finish(""); });
+                } catch (_responseError) {
+                    finish("");
+                }
+            });
+            request.on("error", function() { finish(""); });
+            request.setTimeout(REQUEST_TIMEOUT_MS, function() {
+                try { request.destroy(); } catch (_destroyError) { /* fail open */ }
+                finish("");
+            });
+        } catch (_requestError) {
+            finish("");
+        }
+    }
+
+    // The forge's API first; when it fails, such as with GitGud's challenge
+    // page, the branch's commit from Git's own ref advertisement.
+    function requestLatestSha(https, remote, callback) {
+        requestText(https, remote.hostname, remote.port, remote.path, requestHeaders(remote.forge), "utf8",
+            function(body) {
+                return latestShaFromResponse(remote.forge, JSON.parse(body));
+            },
+            function(latest) {
+                if (/^[0-9a-f]{40,64}$/i.test(latest)) {
+                    callback(latest);
+                    return;
+                }
+                requestText(https, remote.gitHostname, remote.port, remote.gitPath, {
+                    "User-Agent": "DazedTL-TranslationUpdateCheck/1.0"
+                }, "latin1", function(body) {
+                    return shaFromAdvertisement(body, remote.branchRef);
+                }, callback);
+            });
+    }
+
+    function sameCommit(installed, latest) {
+        installed = String(installed || "").trim().toLowerCase();
+        latest = String(latest || "").trim().toLowerCase();
+        if (!/^[0-9a-f]{7,64}$/.test(installed) || !/^[0-9a-f]{7,64}$/.test(latest)) {
+            return true;
+        }
+        return installed === latest || installed.indexOf(latest) === 0 || latest.indexOf(installed) === 0;
+    }
+
+    function openExternal(url) {
+        try {
+            if (typeof nw !== "undefined" && nw.Shell && nw.Shell.openExternal) {
+                nw.Shell.openExternal(url);
+                return;
+            }
+        } catch (_nwError) {
+            // Try legacy NW.js or a normal browser window below.
+        }
+        try {
+            var gui = nodeRequire("nw.gui");
+            if (gui && gui.Shell && gui.Shell.openExternal) {
+                gui.Shell.openExternal(url);
+                return;
+            }
+        } catch (_legacyNwError) {
+            // Try the browser fallback below.
+        }
+        try {
+            if (typeof window !== "undefined" && typeof window.open === "function") {
+                window.open(url, "_blank");
+            }
+        } catch (_windowError) {
+            // A link failure must never affect the game.
+        }
+    }
+
+    function showClickableWarning(repoUrl, latestSha, statePath, fs) {
+        if (typeof document === "undefined" || !document.body || !document.createElement) {
+            return false;
+        }
+
+        var backdrop = document.createElement("div");
+        backdrop.style.position = "fixed";
+        backdrop.style.left = "0";
+        backdrop.style.top = "0";
+        backdrop.style.right = "0";
+        backdrop.style.bottom = "0";
+        backdrop.style.zIndex = "2147483647";
+        backdrop.style.display = "flex";
+        backdrop.style.alignItems = "center";
+        backdrop.style.justifyContent = "center";
+        backdrop.style.background = "rgba(0, 0, 0, 0.72)";
+        backdrop.style.fontFamily = "sans-serif";
+
+        var panel = document.createElement("div");
+        panel.style.maxWidth = "560px";
+        panel.style.margin = "24px";
+        panel.style.padding = "24px";
+        panel.style.border = "2px solid #d8a84e";
+        panel.style.borderRadius = "8px";
+        panel.style.background = "#20232a";
+        panel.style.color = "#f4f4f4";
+        panel.style.boxShadow = "0 12px 36px rgba(0, 0, 0, 0.55)";
+
+        var title = document.createElement("div");
+        title.textContent = text("title");
+        title.style.fontSize = "22px";
+        title.style.fontWeight = "bold";
+        title.style.marginBottom = "12px";
+        panel.appendChild(title);
+
+        var detail = document.createElement("div");
+        detail.textContent = text("detail");
+        detail.style.fontSize = "16px";
+        detail.style.lineHeight = "1.5";
+        detail.style.marginBottom = "14px";
+        panel.appendChild(detail);
+
+        var link = document.createElement("a");
+        link.href = repoUrl;
+        link.textContent = text("repositoryLink");
+        link.style.display = "inline-block";
+        link.style.color = "#72b7ff";
+        link.style.fontSize = "16px";
+        link.style.marginBottom = "18px";
+        link.style.textDecoration = "underline";
+        link.addEventListener("click", function(event) {
+            try { event.preventDefault(); } catch (_eventError) { /* keep opening */ }
+            openExternal(repoUrl);
+        });
+        panel.appendChild(link);
+
+        var actions = document.createElement("div");
+        actions.style.textAlign = "right";
+
+        var installed = document.createElement("button");
+        installed.type = "button";
+        installed.textContent = text("installedButton");
+        installed.style.padding = "8px 12px";
+        installed.style.marginRight = "10px";
+        installed.style.fontSize = "14px";
+        installed.style.cursor = "pointer";
+        installed.addEventListener("click", function() {
+            try {
+                var confirmed = typeof window === "undefined" ||
+                    typeof window.confirm !== "function" ||
+                    window.confirm(text("installedConfirm"));
+                if (!confirmed) return;
+                fs.writeFileSync(statePath, latestSha + "\n", "ascii");
+                if (backdrop.parentNode) backdrop.parentNode.removeChild(backdrop);
+            } catch (_stateError) {
+                try {
+                    if (typeof window !== "undefined" && typeof window.alert === "function") {
+                        window.alert(text("saveFailed"));
+                    }
+                } catch (_stateWarningError) {
+                    // Failure to save or explain updater state never affects the game.
+                }
+            }
+        });
+        actions.appendChild(installed);
+
+        var close = document.createElement("button");
+        close.type = "button";
+        close.textContent = text("continueButton");
+        close.style.padding = "8px 18px";
+        close.style.fontSize = "16px";
+        close.style.cursor = "pointer";
+        close.addEventListener("click", function() {
+            try {
+                if (backdrop.parentNode) backdrop.parentNode.removeChild(backdrop);
+            } catch (_closeError) {
+                // The game continues even if the warning cannot remove itself.
+            }
+        });
+        actions.appendChild(close);
+        panel.appendChild(actions);
+        backdrop.appendChild(panel);
+        document.body.appendChild(backdrop);
+        return true;
+    }
+
+    function warnPlayer(repoUrl, latestSha, statePath, fs) {
+        try {
+            var message = text("alertText") + "\n\n" + text("alertHelp") + "\n\n" + repoUrl;
+            if (showClickableWarning(repoUrl, latestSha, statePath, fs)) return;
+            if (typeof window !== "undefined" && typeof window.alert === "function") {
+                window.alert(message);
+            }
+        } catch (_warningError) {
+            // Even a failed warning must not affect the game.
+        }
+    }
+
+    function checkForUpdate() {
+        try {
+            var fs = nodeRequire("fs");
+            var path = nodeRequire("path");
+            var https = nodeRequire("https");
+            if (!fs || !path || !https) return;
+
+            var gameRoot = findGameRoot(fs, path);
+            if (!gameRoot) return;
+            var updaterRoot = path.join(gameRoot, "gameupdate");
+            var config = parseConfig(fs.readFileSync(path.join(updaterRoot, "patch-config.txt"), "utf8"));
+            var remote = resolveRemote(config);
+            if (!remote) return;
+
+            var installed = fs.readFileSync(path.join(updaterRoot, "previous_patch_sha.txt"), "utf8").trim();
+            if (!/^[0-9a-f]{7,64}$/i.test(installed)) return;
+            var statePath = path.join(updaterRoot, "previous_patch_sha.txt");
+            requestLatestSha(https, remote, function(latest) {
+                try {
+                    if (!sameCommit(installed, latest)) {
+                        warnPlayer(remote.repoUrl, latest, statePath, fs);
+                    }
+                } catch (_compareError) {
+                    // The game always continues.
+                }
+            });
+        } catch (_checkError) {
+            // Missing state/config, filesystem errors, and runtime differences are expected.
+        }
+    }
+
+    // Loads TL Inspector after every plugin, where its file is: the game's
+    // folder is the one RPG Maker keeps saves under, beside index.html. Its
+    // own script element, not PluginManager's, so a file that fails to load
+    // is no "Failed to load" error. A plugins.js that still lists it, as
+    // DazedTL's installs once did, loads it already.
+    function loadInspector() {
+        try {
+            var fs = nodeRequire("fs");
+            var path = nodeRequire("path");
+            var main = typeof process !== "undefined" && process.mainModule;
+            if (!fs || !path || !main || !main.filename || typeof document === "undefined") return;
+            if (!fs.statSync(path.join(path.dirname(main.filename), INSPECTOR)).isFile()) return;
+            var listed = typeof $plugins !== "undefined" && $plugins.some(function(plugin) {
+                return plugin && plugin.status && plugin.name === "TLInspector";
+            });
+            if (listed) return;
+            var script = document.createElement("script");
+            script.type = "text/javascript";
+            script.src = INSPECTOR;
+            script.async = false;
+            script.onerror = function() {};
+            document.body.appendChild(script);
+        } catch (_inspectorError) {
+            // Without its file, or outside NW.js, the game runs without it.
+        }
+    }
+
+    loadInspector();
+    try {
+        setTimeout(checkForUpdate, 0);
+    } catch (_startupError) {
+        // Loading this plugin must never prevent RPG Maker from booting.
+    }
+})();

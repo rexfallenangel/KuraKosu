@@ -4,3 +4,5 @@
 /.dazedtl export-ignore
 /ace_json export-ignore
 /[aA][gG][eE][nN][tT][sS].[mM][dD] export-ignore
+# Images decoded from the game's archives reach players inside the archives.
+/.dazedtl/len-method/work/img export-ignore dazedtl-decoded-images

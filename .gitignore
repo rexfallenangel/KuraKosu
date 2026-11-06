@@ -208,3 +208,17 @@ cache/
 !/.dazedtl/skills/*.[mM][dD]
 !/AGENTS.md
 # END DazedTL portable translation settings
+
+# DazedTL selected image patches
+!/.dazedtl/
+/.dazedtl/*
+!/.dazedtl/len-method/
+/.dazedtl/len-method/*
+!/.dazedtl/len-method/work/
+/.dazedtl/len-method/work/*
+!/.dazedtl/len-method/work/img/
+/.dazedtl/len-method/work/img/*
+!/.dazedtl/len-method/work/img/Picture/
+/.dazedtl/len-method/work/img/Picture/*
+!/.dazedtl/len-method/work/img/Picture/kaisou.png
+!/.dazedtl/len-method/work/img/Picture/kaisou_bg.jpg

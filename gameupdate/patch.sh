@@ -534,6 +534,26 @@ retire_data_wolf() {
     fi
 }
 
+wolf_apply_deltas() {
+    # gameupdate/deltas/deltas.txt: name, source sha256, target sha256. Originals stay as Data/<name>.wolf.bak.
+    local dir="$ROOT_DIR/gameupdate/deltas" name src_sha dst_sha wolf source
+    [ -f "$dir/deltas.txt" ] || return 0
+    command -v xdelta3 >/dev/null 2>&1 || { echo "ERROR: xdelta3 is required to apply this patch." >&2; return 1; }
+    while read -r name src_sha dst_sha; do
+        [ -n "$name" ] || continue
+        wolf="$ROOT_DIR/Data/$name.wolf"
+        if [ -f "$wolf" ] && [ "$(sha256sum "$wolf" | cut -d' ' -f1)" = "$dst_sha" ]; then continue; fi
+        source="$wolf"; [ -f "$wolf.bak" ] && source="$wolf.bak"
+        if [ ! -f "$source" ] || [ "$(sha256sum "$source" | cut -d' ' -f1)" != "$src_sha" ]; then
+            echo "ERROR: $source is not the expected original game file." >&2; return 1
+        fi
+        xdelta3 -d -f -s "$source" "$dir/$name.xdelta" "$wolf.tmp" || return 1
+        if [ "$(sha256sum "$wolf.tmp" | cut -d' ' -f1)" != "$dst_sha" ]; then rm -f "$wolf.tmp"; echo "ERROR: patched $name.wolf failed its check." >&2; return 1; fi
+        [ "$source" = "$wolf" ] && mv "$wolf" "$wolf.bak"
+        mv "$wolf.tmp" "$wolf"
+    done < "$dir/deltas.txt"
+}
+
 wolf_retire_split_archives() {
     # Older WOLF builds read Data/<Name>.wolf before a loose Data/<Name>/ folder.
     # gameupdate/split-archives.txt lists stems whose complete loose folder ships with the patch.
@@ -840,6 +860,7 @@ download_extract() {
     # Retire Data.wolf if loose Data/ is ready after the patch copy.
     invoke_wolf_pre_setup
     wolf_retire_split_archives
+    wolf_apply_deltas
 
     echo "Cleaning up..."
     rm -rf "$TMP_EX"

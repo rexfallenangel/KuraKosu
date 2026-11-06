@@ -1,4 +1,0 @@
-BasicData
-MapData
-scenario
-Picture

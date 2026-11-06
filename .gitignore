@@ -36,14 +36,10 @@ cache/
 # BEGIN DazedTL Len patch files
 # Only reviewed runtime patch files and repository metadata belong in Git.
 /*
-!/.dazedtl/
-/.dazedtl/*
 !/Data/
 /Data/*
 !/gameupdate/
 /gameupdate/*
-!/.dazedtl/len-method/
-/.dazedtl/len-method/*
 !/Data/BasicData/
 /Data/BasicData/*
 !/Data/MapData/
@@ -52,16 +48,11 @@ cache/
 /Data/Picture/*
 !/Data/scenario/
 /Data/scenario/*
-!/.dazedtl/len-method/work/
-/.dazedtl/len-method/work/*
-!/.dazedtl/len-method/work/img/
-/.dazedtl/len-method/work/img/*
-!/.dazedtl/len-method/work/img/Picture/
-/.dazedtl/len-method/work/img/Picture/*
-!/.dazedtl/len-method/work/img/Picture/kaisou.png
-!/.dazedtl/len-method/work/img/Picture/kaisou_bg.jpg
+!/gameupdate/deltas/
+/gameupdate/deltas/*
 !/.gitattributes
 !/.gitignore
+!/ApplyPatch.bat
 !/Data/BasicData/CDataBase.dat
 !/Data/BasicData/CDataBase.project
 !/Data/BasicData/CommonEvent.dat
@@ -549,10 +540,14 @@ cache/
 !/UberWolfCli.LICENSE.txt
 !/UberWolfCli.exe
 !/gameupdate/TranslationUpdateCheck.js
+!/gameupdate/apply-deltas.ps1
+!/gameupdate/deltas/BasicData.xdelta
+!/gameupdate/deltas/MapData.xdelta
+!/gameupdate/deltas/deltas.txt
+!/gameupdate/deltas/scenario.xdelta
 !/gameupdate/patch-config.example.txt
 !/gameupdate/patch.ps1
 !/gameupdate/patch.sh
-!/gameupdate/split-archives.txt
 # END DazedTL Len patch files
 
 # BEGIN DazedTL portable translation settings
